@@ -7,7 +7,6 @@ postgres:
   python: python-psycopg2
   service: postgresql
   conf_dir: /var/lib/pgsql/data
-  data_dir: /var/lib/pgsql/data
   version: 9.1
   use_upstream_repo: False
   users: {}
@@ -17,10 +16,11 @@ postgres:
   postgresconf_backup: True
   postgresconf: ""
   pg_hba.conf: salt://postgres/pg_hba.conf
-  initdb: True
-  initdb_user: root
-  initdb_args: --data-checksum
-  commands:
-    initdb: service postgresql initdb
   user: postgres
   group: postgres
+  prepare_cluster:
+    user: root
+    command: service postgresql initdb
+    test: test -f /var/lib/pgsql/data/PG_VERSION
+    env:
+      LC_ALL: C.UTF-8

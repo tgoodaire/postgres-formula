@@ -1,7 +1,11 @@
 postgres:
   pg_hba.conf: salt://postgres/pg_hba.conf
-  commands:
-    initdb: service postgresql initdb
+  prepare_cluster:
+    user: root
+    command: service postgresql initdb
+    test: test -f /var/lib/pgsql/data/PG_VERSION
+    env:
+      LC_ALL: C.UTF-8
 
   use_upstream_repo: False
 

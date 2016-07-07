@@ -16,9 +16,7 @@ postgresql-config-dir:
     - makedirs: True
     - require:
       - pkg: postgresql-installed
-{% if postgres.conf_dir == postgres.data_dir %}
       - cmd: postgresql-cluster-prepared
-{% endif %}
 
 postgresql-installed:
   pkg.installed:
@@ -28,20 +26,18 @@ postgresql-installed:
 # make sure the data directory and contents have been initialized
 postgresql-cluster-prepared:
   cmd.run:
-    {% if postgres.initdb %}
-    - name: {{ postgres.commands.initdb }} {{ postgres.initdb_args }} -D {{ postgres.data_dir }}
-    {% elif grains.os_family == 'Debian' %}
-    - name: pg_createcluster {{ postgres.version }} main
-    {# else: TODO #}
-    {% endif %}
     - cwd: /
-    - user: {{ postgres.initdb_user }}
+    - name: {{ postgres.prepare_cluster.command }}
+{#    #- user: {{ postgres.prepare_cluster.user }}   #}
+    - user: root
     - unless:
-      - test -f {{ postgres.data_dir }}/PG_VERSION
+      - {{ postgres.prepare_cluster.test }}
     - require:
       - pkg: postgresql-installed
     - env:
-      LC_ALL: C.UTF-8
+{% for name, value in postgres.prepare_cluster.env.items() %}
+      {{ name }}: {{ value }}
+{% endfor %}
 
 postgresql-running:
   service.running:
@@ -154,9 +150,12 @@ postgresql-db-{{ name }}:
     - user: {{ db.get('runas', postgres.user) }}
     - require:
       - service: postgresql-running
-    {% if db.get('user') %}
-      - postgres_user: postgresql-user-{{ db.get('user') }}
+    {% if db.get('tablespace') %}
+      - postgres_tablespace: postgresql-tablespace-{{ name }}
     {% endif %}
+    {% if db.get('owner') %}
+      - postgres_user: postgresql-user-{{ db.get('owner') }}
+   {% endif %}
 
 {% if db.schemas is defined %}
 {% for schema, schema_args in db.schemas.items() %}
