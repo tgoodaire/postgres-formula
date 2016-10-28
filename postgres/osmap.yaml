@@ -1,32 +1,84 @@
-RedHat:
-  initdb_user: postgres
-  commands:
-    initdb: initdb
-  pkg: postgresql-server
-  pkg_client: postgresql
-  pkg_repo: pgdg94
-  repo_baseurl: http://yum.postgresql.org/9.4/redhat/rhel-$releasever-$basearch
+{% import_yaml "postgres/repo.yaml" as repo %}
+
+{% set release = repo.version|replace('.', '') %}
+
 Arch:
   conf_dir: /var/lib/postgres/data
-  data_dir: /var/lib/postgres/data
-  initdb_user: postgres
-  initdb_args: --locale en_US.UTF8 -E UTF8
-  commands:
-    initdb: initdb
+  prepare_cluster:
+    user: postgres
+    command: initdb -D /var/lib/postgresql/data
+    test: test -f /var/lib/postgres/data/PG_VERSION
+    env: {}
   pkg_client: postgresql
   pkg_dev: postgresql
+
 Debian:
-  pkg_repo_file: /etc/apt/sources.list.d/pgdg.list
+  pkg_repo:
+    humanname: PostgreSQL Official Repository
+    key_url: 'https://www.postgresql.org/media/keys/ACCC4CF8.asc'
+    file: /etc/apt/sources.list.d/pgdg.list
+  pkg_repo_keyid: ACCC4CF8
   pkg_dev: postgresql-server-dev-all
   pkg_libpq_dev: libpq-dev
-  initdb: False
-Suse:
-  initdb_user: postgres
-  commands:
-    initdb: initdb
-  pkg: postgresql-server
-  pkg_client: postgresql
+
 FreeBSD:
   user: pgsql
+
 OpenBSD:
   user: _postgresql
+
+RedHat:
+  pkg_repo:
+    name: pgdg{{ release }}
+    humanname: PostgreSQL {{ repo.version }} $releasever - $basearch
+    baseurl: 'https://download.postgresql.org/pub/repos/yum/{{ repo.version }}/redhat/rhel-$releasever-$basearch'
+    gpgcheck: 1
+    gpgkey: 'https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG-{{ release }}'
+
+{% if repo.use_upstream_repo %}
+
+  pkg: postgresql{{ release }}-server
+  pkg_client: postgresql{{ release }}
+  conf_dir: /var/lib/pgsql/{{ repo.version }}/data
+  service: postgresql-{{ repo.version }}
+
+  # Directory containing PostgreSQL client executables
+  bin_dir: /usr/pgsql-{{ repo.version }}/bin
+  client_bins:
+    - clusterdb
+    - createdb
+    - createlang
+    - createuser
+    - dropdb
+    - droplang
+    - dropuser
+    - pg_archivecleanup
+    - pg_basebackup
+    - pg_config
+    - pg_dump
+    - pg_dumpall
+    - pg_isready
+    - pg_receivexlog
+    - pg_restore
+    - pg_rewind
+    - pg_test_fsync
+    - pg_test_timing
+    - pg_upgrade
+    - pg_xlogdump
+    - pgbench
+    - psql
+    - reindexdb
+    - vacuumdb
+
+{% else %}
+
+  pkg: postgresql-server
+  pkg_client: postgresql
+
+{% endif %}
+
+Suse:
+  pkg: postgresql-server
+  pkg_client: postgresql
+
+# vim: ft=sls
